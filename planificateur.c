@@ -16,10 +16,19 @@
 #include <time.h>
 
 // Fonction pour exécuter une commande via le shell
-void executer_commande(const char *commande)
+void executer_commande(const char *commande, int diff2)
 {   
+    clock_t start = clock();
     printf("commande exécuté\n");
     // Lancement de la commande via le shell
+    //attent le temps de diff2 avant de lancer la commande sans couper le processus
+    clock_t diff = clock() - start;
+    int diff1 = diff2 - diff;
+    if (diff1 > 0)
+    {
+        sleep(diff1);
+    }
+    
     execl("/bin/sh", "sh", "-c", commande, NULL);
 
     // Si execl échoue, affiche une erreur
@@ -28,7 +37,7 @@ void executer_commande(const char *commande)
 }
 
 // Fonction pour planifier les tâches en fonction du délai et du nombre d'itérations
-void planifier_taches(const char *commande, int delai, int iterations)
+void planifier_taches(const char *commande, int delai, int iterations, int diff2)
 {
     // Si le nombre d'itérations est infini, défini iterations sur -1
     if (iterations == -1)
@@ -46,9 +55,10 @@ void planifier_taches(const char *commande, int delai, int iterations)
                 exit(EXIT_FAILURE);
             }
             else if (pid == 0)
-            {
+            {   
+                
                 // Processus fils : exécute la commande
-                executer_commande(commande);
+                executer_commande(commande, diff2);
                 exit(EXIT_SUCCESS); // Quitte le processus fils après l'exécution de la commande
             }
             else
@@ -73,9 +83,9 @@ void planifier_taches(const char *commande, int delai, int iterations)
                 exit(EXIT_FAILURE);
             }
             else if (pid == 0)
-            {
+            {   
                 // Processus fils : exécute la commande
-                executer_commande(commande);
+                executer_commande(commande, diff2);
                 exit(EXIT_SUCCESS); // Quitte le processus fils après l'exécution de la commande
             }
             else
@@ -94,7 +104,7 @@ void planifier_taches(const char *commande, int delai, int iterations)
 }
 
 // Fonction pour créer un processus fils et planifier les tâches
-void fork_planifier(const char *commande, int delai, int iterations){
+void fork_planifier(const char *commande, int delai, int iterations, int diff){
     pid_t pid = fork();
         if (pid == -1)
         {
@@ -103,9 +113,10 @@ void fork_planifier(const char *commande, int delai, int iterations){
             exit(EXIT_FAILURE);
         }
         else if (pid == 0)
-        {
+        {   
+            
             // Processus fils : exécute la commande
-            planifier_taches(commande, delai, iterations);
+            planifier_taches(commande, delai, iterations, diff);
             exit(EXIT_SUCCESS); // Quitte le processus fils après l'exécution de la commande
         }
 }
@@ -175,13 +186,13 @@ int main(int argc, char *argv[])
         if (difference < 0)
         {
             printf("Date spécifiée antérieure à la date actuelle. Exécution immédiate de la commande.\n");
-            fork_planifier(commande, delai, iterations); 
+            fork_planifier(commande, delai, iterations, 0); 
             exit(EXIT_SUCCESS);
         }
         else if (difference == 0)
         {
             printf("Date spécifiée identique à la date actuelle. Exécution immédiate de la commande.\n");
-            fork_planifier(commande, delai, iterations); 
+            fork_planifier(commande, delai, iterations, 0); 
             exit(EXIT_SUCCESS);
         }
         else
@@ -191,12 +202,12 @@ int main(int argc, char *argv[])
             sleep(difference);
 
             // Exécution de la commande après l'attente
-            fork_planifier(commande, delai, iterations); 
+            fork_planifier(commande, delai, iterations, difference); 
         }
     }
     else // Si aucune date spécifiée, exécute immédiatement la commande
     {   
-        fork_planifier(commande, delai, iterations); 
+        fork_planifier(commande, delai, iterations, 0); 
     }
 
     return 0;
